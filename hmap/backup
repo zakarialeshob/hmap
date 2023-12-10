@@ -1,0 +1,158 @@
+/*int hmap_remove(Hmap* hmap, char* key) {
+  // Calcul du hash de la clé
+  int hash = Hash(key);
+
+  // Recherche du noeud dans l'arbre binaire
+  ABR* noeud = hmap->pRoot;
+  while (noeud != NULL && strcmp(noeud->couple->key, key) != 0) {
+    if (hash < noeud->hash) {
+      noeud = noeud->fd;
+    } else {
+      noeud = noeud->fg;
+    }
+  
+
+  // Si le noeud n'existe pas, on retourne 0
+  if (noeud == NULL) {
+    return 0;
+  }
+
+  // Si le noeud a des enfants, on ne le supprime pas
+  if (noeud->fd != NULL || noeud->fg != NULL) {
+    return 0;
+  }
+
+  // Si le noeud est une feuille, on le supprime simplement
+  if (noeud->fd == NULL && noeud->fg == NULL) {
+    // On récupère le next du noeud à supprimer
+    Node* next = noeud->couple->next;
+
+    // On libère la mémoire du noeud
+    free(noeud->couple);
+    free(noeud);
+
+    // On met à jour la racine de l'arbre si nécessaire
+    if (noeud == hmap->pRoot) {
+      hmap->pRoot = NULL;
+    }
+
+    // On retourne 1
+    return 1;
+  }
+  
+  // Si le noeud a deux enfants, on le remplace par le successeur
+  // On commence par trouver le successeur
+  ABR* successeur = noeud->fd;
+  while (successeur->fg != NULL) {
+    successeur = successeur->fg;
+  }
+
+  // On échange les couples du successeur et du noeud à supprimer
+  Node* couple = noeud->couple;
+  noeud->couple = successeur->couple;
+  successeur->couple = couple;
+
+  // On supprime le successeur
+  int success = hmap_remove(hmap, successeur->couple->key);
+
+  // On retourne 1 si la suppression du successeur a réussi
+  return success;
+}
+}*/
+
+Node* removeNode(Node* n, char* name) { 
+    if (n == NULL) {
+        return NULL;
+    }
+    if (strcmp(n->key,name) == 0) {
+        Node* tmp = n;
+        n = n->next;
+        free(tmp);
+        return n;
+    }
+
+    Node *p = n;
+    while (p->next != NULL) {
+        if (strcmp(p->next->key, name) == 0) {
+            Node *temp = p->next;
+            p->next = temp->next;
+            free(temp);
+            return n;
+        }
+        p = p->next;
+    }
+    return n;
+}
+
+int removeNodeFromABR(ABR* pRoot, const char* name, int hash) {
+    if (pRoot == NULL) {
+        return 0;  // Nœud non trouvé
+    }
+    if (hash < pRoot->hash) {
+        printf("fils gauche\n");
+        return removeNodeFromABR(pRoot->fg, name, hash);
+    } else if (hash > pRoot->hash) {
+        printf("fils droit\n");
+        return removeNodeFromABR(pRoot->fd, name, hash);
+    } else {
+        // Le nœud a été trouvé
+        printf("noeud trouvé %s|%s\n", pRoot->couple->key, pRoot->couple->value);
+        Node* currentNode = pRoot->couple;
+        Node* prevNode = NULL;
+
+        // Recherche du nœud dans la liste chaînée
+        while (currentNode != NULL && strcmp(currentNode->key, name) != 0) {
+            printf("recherche dans la liste chainée\n");
+            prevNode = currentNode;
+            currentNode = currentNode->next;
+        }
+
+        if (currentNode == NULL) {
+            printf("noeud introuvable\n");
+            return 0;  // Le nœud avec le nom donné n'a pas été trouvé
+        }
+
+        // Suppression du nœud de la liste chaînée
+        if (prevNode == NULL) {
+            printf("suppression du noeud tete de liste \n");
+            // Le nœud à supprimer est en tête de liste
+            pRoot->couple = currentNode->next;
+        } 
+        else {
+            printf("suppression du noeud milieu de liste \n");
+            prevNode->next = currentNode->next;
+        }
+
+        // Suppression du nœud
+        printf("adresse noeud %p",currentNode);
+        printf("suppression du noeud\n");
+        //free(currentNode)
+        currentNode=removeNode(currentNode, name);
+
+        // Si la liste chaînée est vide, supprimer le nœud de l'ABR
+        if (pRoot->couple == NULL && pRoot->fd==NULL && pRoot->fg==NULL) {
+            printf("suppression du noeud de l'ABR\n");
+            pRoot->couple=removeNode(pRoot->couple, name);
+        }
+
+        return 1;  // Suppression réussie
+    }
+}
+
+// Fonction principale pour supprimer un nœud de la Hmap
+int removeHmap(Hmap* H, char* name) {
+    if (H == NULL || H->pRoot == NULL || name == NULL) {
+        return 0;  // Paramètres invalides
+    }
+
+    int hash = Hash(name);
+    return removeNodeFromABR(H->pRoot, name, hash);
+}
+
+void freeNode(Node* n) {
+    while (n != NULL) {
+        Node* temp = n;
+        n = n->next;
+        free(temp);
+    }
+}
